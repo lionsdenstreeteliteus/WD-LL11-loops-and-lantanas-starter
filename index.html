@@ -1,53 +1,324 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Lantana Park Directory</title>
-  <link rel="stylesheet" href="style.css"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LoopCraft · Lantana Alliance Park Directory</title>
+  <meta name="description" content="Refactor loops and render real data for Lantana's cooling stations. Includes search, filters, featured, wishlist, and grouped views." />
+  <meta name="color-scheme" content="light dark" />
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #111827;
+      --muted: #6b7280;
+      --text: #e5e7eb;
+      --accent: #4f46e5;
+      --good: #22c55e;
+      --bad: #ef4444;
+      --ring: rgba(79,70,229,.25);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, Apple Color Emoji, Segoe UI Emoji;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 72px; }
+    header h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: .2px; }
+    header p { margin: 0; color: var(--muted); }
+
+    .bar { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; margin: 20px 0 16px; }
+    .bar input[type="search"], select, button {
+      appearance: none; border: 1px solid #1f2937; background: var(--panel); color: var(--text);
+      padding: 10px 12px; border-radius: 10px; font-size: 14px; outline: none;
+    }
+    .bar input[type="search"]:focus, select:focus, button:focus { box-shadow: 0 0 0 4px var(--ring); border-color: var(--accent); }
+    button { cursor: pointer; }
+
+    .grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+    .panel { background: var(--panel); border: 1px solid #1f2937; border-radius: 14px; padding: 16px; }
+    .panel h3 { margin: 0 0 10px; font-size: 16px; letter-spacing: .2px; }
+
+    ul { list-style: none; margin: 0; padding: 0; }
+    li.station { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 10px; border: 1px solid #1f2937; background: #0f1622; }
+    li.station + li.station { margin-top: 8px; }
+    .badge { font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid #1f2937; }
+    .open { color: #022b12; background: linear-gradient(180deg,#22c55e22,#22c55e11); border-color: #14532d; }
+    .closed { color: #3c0b0b; background: linear-gradient(180deg,#ef444422,#ef444411); border-color: #7f1d1d; }
+    .meta { color: var(--muted); font-size: 12px; }
+
+    .featured { border: 1px dashed #374151; border-radius: 12px; padding: 12px; }
+    .desc { margin-top: 4px; color: var(--muted); font-size: 13px; }
+
+    .city-group { margin-top: 12px; }
+    .city-group h4 { margin: 12px 0 8px; font-size: 14px; color: var(--muted); font-weight: 600; }
+
+    .muted { color: var(--muted); }
+    .empty { padding: 8px 0; color: var(--muted); font-style: italic; }
+    footer { margin-top: 28px; color: var(--muted); font-size: 12px; }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Lantana Alliance – Park Directory</h1>
-    <p>Welcome to our interactive green space guide 🌱</p>
-  </header>
+  <div class="wrap">
+    <header>
+      <h1>LoopCraft: Debugging for Lantana</h1>
+      <p>Use loops, arrays, and objects to render cooling stations. Includes map/reverse refactor, wishlist, search, featured, group-by-city, toggle open, and dropdown filter.</p>
+    </header>
 
-  <main>
-    <section id="station-list">
-      <!-- Stations will be injected here by addStations() -->
+    <!-- Controls: Search + Filters -->
+    <div class="bar">
+      <input id="searchInput" type="search" placeholder="Search stations by name…" aria-label="Search stations" />
+      <select id="citySelect" aria-label="Filter by city"></select>
+      <button id="toggleOpen" aria-pressed="false" title="Toggle open stations">Show Only Open</button>
+    </div>
+
+    <div class="grid">
+      <section class="panel">
+        <h3>Stations</h3>
+        <ul id="stations" aria-live="polite"></ul>
+      </section>
+
+      <aside class="panel">
+        <h3>Featured</h3>
+        <div id="featured" class="featured" aria-live="polite"></div>
+        <div class="city-group">
+          <h4>Wishlist</h4>
+          <ul id="wishlist"></ul>
+        </div>
+      </aside>
+    </div>
+
+    <section class="panel" style="margin-top:16px">
+      <h3>Grouped by City</h3>
+      <div id="grouped"></div>
     </section>
 
-    <!-- 💌 Wishlist Section -->
-    <section id="wishlist">
-      <h2>Wishlist Items</h2>
-      <!-- Wishlist will be injected here -->
+    <section class="panel" style="margin-top:16px">
+      <h3>Search Results</h3>
+      <div id="searchResults"></div>
     </section>
 
-    <!-- 🌟 Featured Station Section -->
-    <section id="featured-station">
-      <h2>Featured Station</h2>
-      <!-- Random station feature will display here -->
-    </section>
+    <footer>
+      LoopCraft starter — swap sample data with your JSON or API. Accessibility: live regions announce updates.
+    </footer>
+  </div>
 
-    <!-- 🔍 Search Feedback Section -->
-    <section id="search-feedback">
-      <!-- Search errors will appear here -->
-    </section>
+  <script>
+  // =========================
+  // Injected sample data (replace with real data or fetch)
+  // =========================
+  const stations = [
+    { id: 101, name: "Maple Shade Misters", city: "Lantana East", hours: "10–6", isOpen: true,  createdAt: "2025-07-10" },
+    { id: 102, name: "Civic Center Cooling", city: "Lantana West", hours: "9–5",  isOpen: false, createdAt: "2025-06-20" },
+    { id: 103, name: "Riverside Tent",       city: "Lantana East", hours: "12–8", isOpen: true,  createdAt: "2025-07-12" },
+    { id: 104, name: "South Ridge Sprayers", city: "Lantana South", hours: "8–4", isOpen: true,  createdAt: "2025-07-02" },
+    { id: 105, name: "North Gate Cool Zone", city: "Lantana North", hours: "11–7", isOpen: false, createdAt: "2025-06-28" }
+  ];
 
-    <!-- 🔄 Toggle Controls -->
-    <section id="toggle-controls">
-      <!-- Filter toggle button will go here -->
-    </section>
+  const wishlist = [
+    "Bench shade sails — Elm Park",
+    "Add bottle refill spigot — Civic Center",
+    "Mister nozzle replacements — Riverside Tent"
+  ];
 
-    <!-- 🏙️ Grouped Stations -->
-    <section id="grouped-stations">
-      <h2>Stations Grouped by City</h2>
-      <!-- Grouped content will render here -->
-    </section>
-  </main>
+  // =========================
+  // Tiny DOM helpers
+  // =========================
+  function el(tag, opts = {}) {
+    const n = document.createElement(tag);
+    if (opts.className) n.className = opts.className;
+    if (opts.text) n.textContent = opts.text;
+    if (opts.html) n.innerHTML = opts.html;
+    if (opts.attrs) Object.entries(opts.attrs).forEach(([k,v]) => n.setAttribute(k, v));
+    return n;
+  }
 
-  <script src="data.js"></script>
-  <script src="dom.js"></script>
-  <script src="script.js"></script>
+  function addStationElement(station) {
+    const li = el("li", { className: "station" });
+    const title = el("div", { html: `<strong>${station.name}</strong>` });
+    const city  = el("div", { className: "meta", text: station.city });
+    const hrs   = el("div", { className: "meta", text: station.hours });
+    const tag   = el("div", { className: `badge ${station.isOpen ? 'open' : 'closed'}`,
+                               text: station.isOpen ? 'OPEN' : 'CLOSED' });
+    li.append(title, city, hrs, tag);
+    return li;
+  }
+
+  // =========================
+  // 🔁 Refactor addStations(): map + reverse (via sort desc)
+  // =========================
+  function addStationsMapReverse(list = stations) {
+    const target = document.getElementById('stations');
+    if (!target) return;
+    target.innerHTML = '';
+    const sorted = [...list].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+    sorted.map(addStationElement).forEach(node => target.appendChild(node));
+  }
+
+  // =========================
+  // 💌 Render Wishlist Items
+  // =========================
+  function renderWishlist(items = wishlist) {
+    const ul = document.getElementById('wishlist');
+    if (!ul) return;
+    ul.innerHTML = '';
+    if (!items.length) { ul.appendChild(el('li', { className: 'empty', text: 'No wishlist items.' })); return; }
+    items.forEach(text => ul.appendChild(el('li', { text })));
+  }
+
+  // =========================
+  // ❌ Handle Search Failures
+  // =========================
+  function searchStations(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return stations.filter(s => s.name.toLowerCase().includes(q));
+  }
+  function renderSearch(query) {
+    const host = document.getElementById('searchResults');
+    if (!host) return;
+    host.innerHTML = '';
+    const results = searchStations(query);
+    if (query && results.length === 0) {
+      host.appendChild(el('p', { className: 'empty', text: `No stations found for "${query}".` }));
+      return;
+    }
+    if (!query) {
+      host.appendChild(el('p', { className: 'muted', text: 'Type above to search by name.' }));
+      return;
+    }
+    const ul = el('ul');
+    results.forEach(s => ul.appendChild(addStationElement(s)));
+    host.appendChild(ul);
+  }
+
+  // =========================
+  // 🌟 Featured Station Picker (random among open)
+  // =========================
+  function pickFeaturedOpenStation() {
+    const opens = stations.filter(s => s.isOpen);
+    if (!opens.length) return null;
+    return opens[Math.floor(Math.random() * opens.length)];
+  }
+  function renderFeatured() {
+    const box = document.getElementById('featured');
+    if (!box) return;
+    box.innerHTML = '';
+    const pick = pickFeaturedOpenStation();
+    if (!pick) { box.appendChild(el('p', { className: 'empty', text: 'No open stations to feature.' })); return; }
+    const card = el('div');
+    card.innerHTML = `<div><strong>${pick.name}</strong> — ${pick.city} · ${pick.hours}</div>`;
+    box.appendChild(card);
+  }
+
+  // =========================
+  // 🏙️ Group by City
+  // =========================
+  function groupByCity(list = stations) {
+    return list.reduce((acc, s) => { (acc[s.city] ||= []).push(s); return acc; }, {});
+  }
+  function renderGroupedByCity() {
+    const host = document.getElementById('grouped');
+    if (!host) return;
+    host.innerHTML = '';
+    const groups = groupByCity();
+    Object.entries(groups).forEach(([city, items]) => {
+      const section = el('section', { className: 'city-group' });
+      section.appendChild(el('h4', { text: city }));
+      const ul = el('ul');
+      items.forEach(s => ul.appendChild(addStationElement(s)));
+      section.appendChild(ul);
+      host.appendChild(section);
+    });
+  }
+
+  // =========================
+  // 🔄 Filter Toggle (All vs Only Open)
+  // =========================
+  let showOnlyOpen = false;
+  function renderWithToggle() {
+    const base = showOnlyOpen ? stations.filter(s => s.isOpen) : stations;
+    addStationsMapReverse(base);
+  }
+  function setupToggle() {
+    const btn = document.getElementById('toggleOpen');
+    if (!btn) return;
+    const setLabel = () => { btn.textContent = showOnlyOpen ? 'Show All' : 'Show Only Open'; btn.setAttribute('aria-pressed', String(showOnlyOpen)); };
+    setLabel();
+    btn.addEventListener('click', () => { showOnlyOpen = !showOnlyOpen; setLabel(); renderWithToggle(); });
+  }
+
+  // =========================
+  // 🎛️ Dropdown Filter (by city)
+  // =========================
+  function uniqueCities(list = stations) { return [...new Set(list.map(s => s.city))].sort(); }
+  function setupCityDropdown() {
+    const select = document.getElementById('citySelect');
+    if (!select) return;
+    select.innerHTML = '';
+    const optAll = el('option', { text: 'All Cities', attrs: { value: '' } });
+    select.appendChild(optAll);
+    uniqueCities().forEach(c => select.appendChild(el('option', { text: c, attrs: { value: c } })));
+    select.addEventListener('change', () => {
+      const city = select.value;
+      const base = showOnlyOpen ? stations.filter(s => s.isOpen) : stations;
+      const filtered = city ? base.filter(s => s.city === city) : base;
+      addStationsMapReverse(filtered);
+    });
+  }
+
+  // =========================
+  // 🧪 Alternative Loop Demo (while)
+  // =========================
+  function addStationsWhile(list = stations) {
+    const target = document.getElementById('stations');
+    if (!target) return;
+    target.innerHTML = '';
+    const sorted = [...list].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+    let i = 0; while (i < sorted.length) { target.appendChild(addStationElement(sorted[i])); i++; }
+  }
+
+  // =========================
+  // 💬 Optional: One-line descriptions (stub)
+  // =========================
+  function addOneLineDescriptions(list = stations) {
+    return list.map(s => ({ ...s, description: `Shaded station in ${s.city}, open ${s.hours}.` }));
+  }
+  function renderWithDescriptions() {
+    const enriched = addOneLineDescriptions();
+    const target = document.getElementById('stations');
+    if (!target) return;
+    target.innerHTML = '';
+    enriched.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(s => {
+      const li = addStationElement(s);
+      li.appendChild(el('div', { className: 'desc', text: s.description }));
+      target.appendChild(li);
+    });
+  }
+
+  // =========================
+  // 🔌 Boot
+  // =========================
+  function init() {
+    addStationsMapReverse();
+    renderWishlist();
+    renderFeatured();
+    renderGroupedByCity();
+    setupToggle();
+    setupCityDropdown();
+
+    const search = document.getElementById('searchInput');
+    if (search) search.addEventListener('input', (e) => renderSearch(e.target.value));
+  }
+  document.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>
+
+
+
